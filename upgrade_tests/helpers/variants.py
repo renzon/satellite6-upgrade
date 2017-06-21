@@ -7,25 +7,8 @@ class VersionError(Exception):
     """Error due to Unsupported Satellite Version"""
 
 
-_supported_ver = ['6.1', '6.2']
-_FROM_VERSION = os.environ.get('FROM_VERSION')
-_TO_VER = os.environ.get('TO_VERSION')
-
-if _FROM_VERSION not in _supported_ver:
-    raise VersionError(
-        'Unsupported preupgrade version {} provided for '
-        'entity variants existence tests'.format(_FROM_VERSION))
-
-if _TO_VER not in _supported_ver:
-    raise VersionError(
-        'Unsupported postupgrade version {} provided for '
-        'entity variants existence tests'.format(_TO_VER))
-
-# dict where key is component and value is a dict of properties which name
-# changed from satellite 6.1 to 6.2.
-# On this last dict the key is the property's name on 6.1 and value the name
-#  on 6.2
-_SAT_6_DOT_1_TO_6_DOT_2 = {
+_VERSION_NAMES_DIFF = {}
+_VERSION_NAMES_DIFF['6.1'] = {
     'filter': {
         'lookupkey': 'variablelookupkey',
         '(miscellaneous)': 'foremanopenscap::arfreport',
@@ -39,19 +22,107 @@ _SAT_6_DOT_1_TO_6_DOT_2 = {
     }
 }
 
+_VERSION_NAMES_DIFF['6.2'] = {
+    'filter': {
+        'variablelookupkey': 'variablelookupkey6.3',
+    },
+    'another': {'foo': 'bar'}
+}
+_VERSION_NAMES_DIFF['6.3'] = {}
 
-def property_name_on_post_version(component, pre):
-    """If a component property changes from on versions to another this
-    function returns the respective updated name. Otherwise returns the
-    unchanged name. This way, to check if a property is present after
-    upgrade the test can (suppose upgrade from 6.1 to 6.2) :
-    >>> property_name_on_post_version('filter', 'lookupkey')
+
+def _increasing_versions(from_version, to_version):
+    major, from_minor = from_version.split('.')
+    to_minor = to_version.split('.')[-1]
+    from_minor = int(from_minor)
+    to_minor = int(to_minor)
+
+    for minor in range(from_minor, to_minor):
+        minor = str(minor)
+        yield '.'.join([major, minor])
+
+
+def map_name_change(component, pre, from_version=None, to_version=None):
+    """If a component property changes from one version (_FROM_VERSION) to
+    another (_TO_VERSION) this function returns the respective changed name
+    on the destination version.
+    Otherwise returns the unchanged name. This way, to check if a property is
+    present after upgrade the test can (suppose upgrade from 6.1 to 6.2):
+    >>> map_name_change('filter', 'lookupkey')
     'variablelookupkey'
 
     :param component: str
     :param pre: str
+    :param from_version: version origin of upgrade. If None value will be
+        extracted from 'FROM_VERSION' env var
+    :param to_version: version destination of upgrade. If None value will be
+        extracted from 'TO_VERSION' env var
     :return: str
     """
-    if component not in _SAT_6_DOT_1_TO_6_DOT_2:
-        return pre
-    return _SAT_6_DOT_1_TO_6_DOT_2[component].get(pre, pre)
+    from_version = from_version or os.environ.get('FROM_VERSION')
+    to_version = to_version or os.environ.get('TO_VERSION')
+
+    _validate_versions(from_version, to_version)
+
+    name = pre
+
+    for current_version in _increasing_versions(from_version, to_version):
+        diff_dict = _VERSION_NAMES_DIFF[current_version]
+        if component in diff_dict:
+            name = diff_dict[component].get(name, name)
+    return name
+
+
+def _validate_versions(from_version, to_version):
+    if from_version not in _VERSION_NAMES_DIFF:
+        raise VersionError(
+            'Unsupported preupgrade version {} provided for '
+            'entity variants existence tests'.format(from_version))
+    if to_version not in _VERSION_NAMES_DIFF:
+        raise VersionError(
+            'Unsupported postupgrade version {} provided for '
+            'entity variants existence tests'.format(to_version))
+
+
+def test_61_to_62_diff():
+    assert 'variablelookupkey' == map_name_change(
+        'filter', 'lookupkey', '6.1', '6.2')
+
+
+def test_61_to_62_no_diff():
+    assert 'foo' == map_name_change('filter', 'foo', '6.1', '6.2')
+
+
+def test_61_to_62_no_component():
+    assert 'foo' == map_name_change('non existent component', 'foo', '6.1',
+                                    '6.2')
+
+
+def test_62_to_63_diff():
+    assert 'variablelookupkey6.3' == map_name_change(
+        'filter', 'variablelookupkey', '6.2', '6.3')
+    assert 'bar' == map_name_change('another', 'foo', '6.2', '6.3')
+
+
+def test_62_to_63_no_diff():
+    assert 'foo' == map_name_change('filter', 'foo', '6.2', '6.3')
+
+
+def test_62_to_63_no_component():
+    assert 'foo' == map_name_change(
+        'non existent component', 'foo', '6.2', '6.3')
+
+
+def test_61_to_63_diff():
+    assert 'variablelookupkey6.3' == map_name_change(
+        'filter', 'lookupkey', '6.1', '6.3')
+    assert 'bar' == map_name_change('another', 'foo', '6.1', '6.3')
+
+
+def test_61_to_63_no_diff():
+    assert 'foo' == map_name_change('filter', 'foo', '6.1', '6.3')
+
+
+def test_61_to_63_no_component():
+    assert 'foo' == map_name_change(
+        'non existent component', 'foo', '6.1', '6.3')

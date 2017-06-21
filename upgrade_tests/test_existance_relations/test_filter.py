@@ -20,7 +20,7 @@ associations post upgrade
 import pytest
 
 from upgrade_tests.helpers.existence import compare_postupgrade, pytest_ids
-from upgrade_tests.helpers.variants import property_name_on_post_version
+from upgrade_tests.helpers.variants import map_name_change
 
 # Required Data
 component = 'filter'
@@ -41,7 +41,7 @@ def test_positive_filters_by_resource_type(pre, post):
     :expectedresults: All filters of all roles should be retained post upgrade
         by resource types
     """
-    assert post == property_name_on_post_version(component, pre)
+    assert post == map_name_change(component, pre)
 
 
 @pytest.mark.parametrize("pre,post", fil_search, ids=pytest_ids(fil_search))
@@ -90,4 +90,4 @@ def test_positive_filters_by_permissions(pre, post):
     :expectedresults: All filters all permissions should be retained post
         upgrade
     """
-    assert post == property_name_on_post_version(component, pre)
+    assert post == map_name_change(component, pre)
