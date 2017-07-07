@@ -18,8 +18,9 @@ associations post upgrade
 :Upstream: No
 """
 import pytest
-from upgrade_tests.helpers.existence import compare_postupgrade, pytest_ids
 
+from upgrade_tests.helpers.existence import compare_postupgrade, pytest_ids, \
+    check_missing_entity
 
 # Required Data
 component = 'filter'
@@ -40,6 +41,9 @@ def test_positive_filters_by_resource_type(pre, post):
     :expectedresults: All filters of all roles should be retained post upgrade
         by resource types
     """
+    msg = check_missing_entity(pre, post)
+    if msg:
+        pytest.fail(msg)
     assert pre == post
 
 
@@ -52,6 +56,9 @@ def test_positive_filters_by_search(pre, post):
     :expectedresults: All filters search criteria should be retained post
         upgrade
     """
+    msg = check_missing_entity(pre, post)
+    if msg:
+        pytest.fail(msg)
     assert pre == post
 
 
@@ -65,6 +72,9 @@ def test_positive_filters_by_unlimited_check(pre, post):
     :expectedresults: All filters unlimited criteria should be retained post
         upgrade
     """
+    msg = check_missing_entity(pre, post)
+    if msg:
+        pytest.fail(msg)
     assert pre == post
 
 
@@ -77,6 +87,9 @@ def test_positive_filters_by_role(pre, post):
     :expectedresults: All filters association with role should be retained post
         upgrade
     """
+    msg = check_missing_entity(pre, post)
+    if msg:
+        pytest.fail(msg)
     assert pre == post
 
 
@@ -89,4 +102,7 @@ def test_positive_filters_by_permissions(pre, post):
     :expectedresults: All filters all permissions should be retained post
         upgrade
     """
+    msg = check_missing_entity(pre, post)
+    if msg:
+        pytest.fail(msg)
     assert pre == post

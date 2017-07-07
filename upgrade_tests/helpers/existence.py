@@ -293,18 +293,24 @@ def compare_postupgrade(component, attribute):
             predata, component, search_key=test_case, attribute=pre_attr)
         postupgrade_entity = find_datastore(
             postdata, component, search_key=test_case, attribute=post_attr)
-        if 'missing' in preupgrade_entity or 'missing' in postupgrade_entity:
-            culprit = preupgrade_entity if 'missing' in preupgrade_entity \
-                else postupgrade_entity
-            culprit_ver = ' in preupgrade version' if 'missing' \
-                in preupgrade_entity else ' in postupgrade version'
-            entity_values.append(
-                pytest.mark.xfail(
-                    (preupgrade_entity, postupgrade_entity),
-                    reason=culprit+culprit_ver))
-        else:
-            entity_values.append((preupgrade_entity, postupgrade_entity))
+        entity_values.append((preupgrade_entity, postupgrade_entity))
     return entity_values
+
+
+def check_missing_entity(postupgrade_entity, preupgrade_entity):
+    """Check entity is not missing on both post and pre upgrade entity.
+    Returns an error message str informing missing entity or empty string
+    otherwise
+
+    :param postupgrade_entity: str
+    :param preupgrade_entity: str
+    :return: str
+    """
+    if 'missing' not in preupgrade_entity+postupgrade_entity:
+        return ''
+    if 'missing' in preupgrade_entity:
+        return '{} in preupgrade version'.format(preupgrade_entity)
+    return '{} in postupgrade version'.format(postupgrade_entity)
 
 
 def pytest_ids(data):
@@ -313,7 +319,7 @@ def pytest_ids(data):
     :param list/str data: The list of tests to pytest parametrized function
     """
     if isinstance(data, list):
-        ids = ["pre and post" for i in range(len(data))]
+        ids = ["pre and post"] * len(data)
     elif isinstance(data, str):
         ids = ["pre and post"]
     else:
