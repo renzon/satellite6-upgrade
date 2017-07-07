@@ -286,7 +286,6 @@ def compare_postupgrade(component, attribute):
     # Getting preupgrade and postupgrade data
     predata = get_datastore('preupgrade')
     postdata = get_datastore('postupgrade')
-    entity_values = []
     for test_case in find_datastore(
             predata, component, attribute=attribute_keys[component]):
         preupgrade_entity = find_datastore(
@@ -298,13 +297,9 @@ def compare_postupgrade(component, attribute):
                 else postupgrade_entity
             culprit_ver = ' in preupgrade version' if 'missing' \
                 in preupgrade_entity else ' in postupgrade version'
-            entity_values.append(
-                pytest.mark.xfail(
-                    (preupgrade_entity, postupgrade_entity),
-                    reason=culprit+culprit_ver))
+            yield preupgrade_entity, postupgrade_entity, culprit+culprit_ver
         else:
-            entity_values.append((preupgrade_entity, postupgrade_entity))
-    return entity_values
+            yield preupgrade_entity, postupgrade_entity, ''
 
 
 def pytest_ids(data):
